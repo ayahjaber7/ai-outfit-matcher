@@ -2,7 +2,7 @@ import streamlit as st
 from PIL import Image
 import requests
 from colorthief import ColorThief
-from webcolors import hex_to_name, CSS3_HEX_TO_NAMES
+import webcolors
 
 # Set up the Streamlit page
 st.set_page_config(page_title="AI Outfit Matcher", layout="centered")
@@ -20,22 +20,25 @@ def get_main_color(image_file):
     dominant_color = ct.get_color(quality=1)
     return dominant_color
 
-# Get closest color name
+# Get closest color name using latest webcolors
 def get_closest_color_name(hex_color):
+    def closest_color(requested_color):
+        min_colors = {}
+        for key, name in webcolors.CSS3_NAMES_TO_HEX.items():
+            r_c, g_c, b_c = webcolors.hex_to_rgb(name)
+            rd = (r_c - requested_color[0]) ** 2
+            gd = (g_c - requested_color[1]) ** 2
+            bd = (b_c - requested_color[2]) ** 2
+            min_colors[(rd + gd + bd)] = name
+        return min_colors[min(min_colors.keys())]
+
     try:
-        return hex_to_name(hex_color)
+        name = webcolors.hex_to_name(hex_color)
     except ValueError:
-        # If exact name not found, return closest CSS3 color
-        min_distance = float("inf")
-        closest_color = None
-        r1, g1, b1 = int(hex_color[1:3], 16), int(hex_color[3:5], 16), int(hex_color[5:], 16)
-        for hex_val, name in CSS3_HEX_TO_NAMES.items():
-            r2, g2, b2 = int(hex_val[1:3], 16), int(hex_val[3:5], 16), int(hex_val[5:], 16)
-            distance = (r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2
-            if distance < min_distance:
-                min_distance = distance
-                closest_color = name
-        return closest_color
+        r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (1, 3, 5))
+        name = closest_color((r, g, b))
+
+    return name
 
 # AI suggestion function
 def get_suggestions(hex_color, color_name, description, occasion):
