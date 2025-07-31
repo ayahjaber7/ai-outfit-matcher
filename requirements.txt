@@ -2,3 +2,4 @@ streamlit
 colorthief
 requests
 Pillow
+webcolors
