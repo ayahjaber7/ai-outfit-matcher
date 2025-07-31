@@ -5,14 +5,14 @@ from colorthief import ColorThief
 import webcolors
 
 # -------------------- Session State --------------------
-if "outfit_history" not in st.session_state:
-    st.session_state.outfit_history = []
 if "favorites" not in st.session_state:
     st.session_state.favorites = []
+if "edit_index" not in st.session_state:
+    st.session_state.edit_index = None
 
 # -------------------- Streamlit Config --------------------
 st.set_page_config(page_title="AI Outfit Matcher", layout="centered")
-st.title("🧕 AI Outfit Matcher")
+st.title("💕 AI Outfit Matcher")
 st.write("Upload a photo of your dress to get hijab, shoes, and bag suggestions.")
 
 # -------------------- File Upload --------------------
@@ -68,17 +68,25 @@ def get_closest_color_name(hex_color):
 def get_suggestions(hex_color, color_name, description, occasion):
     OPENROUTER_API_KEY = st.secrets["openrouter"]["api_key"]
     prompt = f"""
-    A user uploaded a dress with the dominant color {color_name} ({hex_color}).
-    The dress style is described as: "{description}".
-    The occasion is: {occasion}.
+You are a professional modest fashion stylist working for an online wardrobe assistant.
 
-    Suggest:
-    - A hijab color and fabric
-    - Matching shoes (type and color)
-    - A bag or clutch (style and color)
+The user uploaded a dress with the dominant color **{color_name}** (hex: {hex_color}).
+They described the dress as: "{description}".
+The occasion is: **{occasion}**.
 
-    Make the suggestions modest, stylish, and cohesive.
-    """
+Please provide stylish and cohesive recommendations that complement the color and style of the dress for the given occasion.
+
+Your response should include:
+1. A hijab recommendation — include a suitable color and fabric (e.g., chiffon, jersey, silk, etc.). Do not mention hijab wrapping or styling techniques.
+2. Shoe options — suggest a matching style (e.g., heels, flats, sandals, boots, sneakers, etc.), material, and color that pair well with the dress.
+3. A bag, purse, or clutch — include color, texture, shape, and any accents (e.g., gold trim, chain strap) that would elevate the outfit.
+
+Feel free to suggest any colors, fabrics, materials, or styles that best fit the outfit — do not limit suggestions to predefined lists.
+
+Make sure all recommendations are modest, elegant, and appropriate for the selected occasion. Include short explanations for why each piece complements the overall look.
+
+Present the output as a styled markdown list with clear sections.
+"""
 
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -114,68 +122,61 @@ if uploaded_file:
     """, unsafe_allow_html=True)
 
     description = st.text_input("Optional: Describe the dress style (e.g. knit lace, wedding guest)")
-    occasion = st.selectbox("Choose the occasion", ["Wedding", "Graduation", "Interview", "Casual", "Party", "Other"])
+    occasion = st.text_input("Enter the occasion (e.g. wedding, graduation, party)")
 
     if st.button("Get Outfit Suggestions"):
         with st.spinner("Thinking..."):
             suggestions = get_suggestions(hex_color, color_name, description or "Not specified", occasion)
 
-        # Save to history
-        outfit_entry = {
-            "hex": hex_color,
-            "color": color_name,
-            "occasion": occasion,
-            "description": description,
-            "suggestions": suggestions
-        }
-        st.session_state.outfit_history.append(outfit_entry)
-
         st.markdown("### 💡 Outfit Suggestions")
         st.markdown(suggestions)
 
-        # Favorite button
         if st.button("❤️ Add to Favorites"):
+            outfit_entry = {
+                "hex": hex_color,
+                "color": color_name,
+                "occasion": occasion,
+                "description": description,
+                "suggestions": suggestions,
+                "title": f"{occasion} – {color_name.title()}",
+                "tag": ""
+            }
             st.session_state.favorites.append(outfit_entry)
             st.success("Added to favorites!")
 
-        # Suggest styling upgrades
-        st.markdown("### 📝 Suggest Styling Upgrades")
-        user_feedback = st.text_area("Have any styling tips to improve this outfit?")
-        if user_feedback:
-            st.success("Thanks for your input! We'll consider this feedback.")
-
-        # Product recommendations
-        show_recommendations = st.checkbox("Show product recommendations (where to buy)")
-        if show_recommendations:
-            st.markdown("### 🛍️ Where to Buy")
-            st.markdown("- Hijab: Ivory chiffon hijab – [Haute Hijab](https://www.hautehijab.com)")
-            st.markdown("- Shoes: Black pumps – [DSW](https://www.dsw.com)")
-            st.markdown("- Bag: Gold-accent clutch – [Nordstrom](https://www.nordstrom.com)")
-
-        # Copy-to-clipboard
-        st.markdown("### 📋 Copy Outfit")
-        st.markdown(f"""
-            <textarea id='copyTarget' style='width: 100%; height: 100px;'>{suggestions}</textarea>
-            <button onclick="navigator.clipboard.writeText(document.getElementById('copyTarget').value)">📋 Copy to Clipboard</button>
-        """, unsafe_allow_html=True)
-
-        # Email share (placeholder)
-        with st.expander("📧 Share via Email"):
-            email = st.text_input("Enter recipient email (feature coming soon)")
-            st.button("Send (disabled for now)")
-            st.caption("💡 Email sharing will use a backend service like SendGrid or Gmail API.")
-
-# -------------------- History and Favorites --------------------
-if st.session_state.outfit_history:
-    with st.expander("🕘 View Past Looks"):
-        for i, look in enumerate(st.session_state.outfit_history):
-            st.markdown(f"**{i+1}. {look['occasion']} - {look['color']}**")
-            st.markdown(f"- *{look['description']}*")
-            st.markdown(f"- {look['suggestions']}")
-
+# -------------------- Favorites --------------------
 if st.session_state.favorites:
-    with st.expander("⭐ View Favorites"):
-        for i, fav in enumerate(st.session_state.favorites):
-            st.markdown(f"**{i+1}. {fav['occasion']} - {fav['color']}**")
-            st.markdown(f"- *{fav['description']}*")
-            st.markdown(f"- {fav['suggestions']}")
+    st.markdown("## ⭐ Your Favorite Outfits")
+    for i, fav in enumerate(st.session_state.favorites[::-1]):
+        index = len(st.session_state.favorites) - 1 - i
+
+        with st.container():
+            if st.session_state.edit_index == index:
+                new_title = st.text_input("Rename this favorite:", fav.get("title", ""), key=f"title_{index}")
+                new_tag = st.text_input("Add a tag (optional):", fav.get("tag", ""), key=f"tag_{index}")
+
+                col1, col2 = st.columns([1, 1])
+                if col1.button("✅ Save", key=f"save_{index}"):
+                    st.session_state.favorites[index]["title"] = new_title.strip()
+                    st.session_state.favorites[index]["tag"] = new_tag.strip()
+                    st.session_state.edit_index = None
+
+                if col2.button("❌ Cancel", key=f"cancel_{index}"):
+                    st.session_state.edit_index = None
+            else:
+                st.markdown(f"""
+                <div style='border: 1px solid #444; border-radius: 10px; padding: 15px; margin-bottom: 10px; background-color: #1e1e1e;'>
+                    <h4 style='margin-bottom: 5px;'>✨ {fav.get("title", "")}</h4>
+                    <p><strong>Description:</strong> {fav['description'] or "N/A"}</p>
+                    <p><strong>Tag:</strong> {fav.get("tag", "None")}</p>
+                    <p><strong>Suggestions:</strong><br>{fav['suggestions']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+                col1, col2 = st.columns([1, 1])
+                if col1.button("✏️ Edit", key=f"edit_{index}"):
+                    st.session_state.edit_index = index
+                if col2.button("🗑️ Delete", key=f"delete_{index}"):
+                    st.session_state.favorites.pop(index)
+                    st.success("Favorite deleted.")
+                    st.experimental_rerun()
