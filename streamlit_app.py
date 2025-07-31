@@ -22,10 +22,25 @@ def get_main_color(image_file):
 
 # Get closest color name using latest webcolors
 def get_closest_color_name(hex_color):
+    css3_color_names = [
+        "black", "silver", "gray", "white", "maroon", "red", "purple", "fuchsia",
+        "green", "lime", "olive", "yellow", "navy", "blue", "teal", "aqua",
+        "orange", "aliceblue", "gold", "beige", "brown", "chocolate", "coral",
+        "crimson", "darkblue", "darkgreen", "darkred", "deeppink", "dodgerblue",
+        "firebrick", "gainsboro", "indigo", "ivory", "khaki", "lavender",
+        "lightblue", "lightgray", "lightpink", "lightyellow", "mediumblue",
+        "mediumorchid", "mediumseagreen", "midnightblue", "mintcream",
+        "mistyrose", "moccasin", "navajowhite", "oldlace", "orchid", "peachpuff",
+        "peru", "pink", "plum", "rosybrown", "royalblue", "saddlebrown", "salmon",
+        "sandybrown", "seagreen", "seashell", "sienna", "skyblue", "slateblue",
+        "slategray", "snow", "springgreen", "steelblue", "tan", "thistle", "tomato",
+        "turquoise", "violet", "wheat", "whitesmoke"
+    ]
+
     def closest_color(requested_rgb):
         min_distance = float("inf")
         closest_name = None
-        for name in webcolors.CSS3_NAMES:
+        for name in css3_color_names:
             try:
                 r_c, g_c, b_c = webcolors.name_to_rgb(name)
                 distance = ((r_c - requested_rgb[0]) ** 2 +
@@ -43,6 +58,7 @@ def get_closest_color_name(hex_color):
     except ValueError:
         r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (1, 3, 5))
         return closest_color((r, g, b))
+
 
 
 # AI suggestion function
