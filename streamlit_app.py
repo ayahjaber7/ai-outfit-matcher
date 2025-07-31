@@ -40,9 +40,9 @@ def get_suggestions(color_hex, description):
     }
 
     data = {
-        "model": "openchat/openchat-3.5-0106",
-        "messages": [{"role": "user", "content": prompt}]
-    }
+    "model": "mistralai/mistral-7b-instruct",
+    "messages": [{"role": "user", "content": prompt}]
+}
 
     response = requests.post("https://openrouter.ai/api/v1/chat/completions", json=data, headers=headers)
 
