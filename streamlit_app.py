@@ -22,23 +22,28 @@ def get_main_color(image_file):
 
 # Get closest color name using latest webcolors
 def get_closest_color_name(hex_color):
-    def closest_color(requested_color):
-        min_colors = {}
-        for key, name in webcolors.CSS3_NAMES_TO_HEX.items():
-            r_c, g_c, b_c = webcolors.hex_to_rgb(name)
-            rd = (r_c - requested_color[0]) ** 2
-            gd = (g_c - requested_color[1]) ** 2
-            bd = (b_c - requested_color[2]) ** 2
-            min_colors[(rd + gd + bd)] = name
-        return min_colors[min(min_colors.keys())]
+    def closest_color(requested_rgb):
+        min_distance = float("inf")
+        closest_name = None
+        for name in webcolors.CSS3_NAMES:
+            try:
+                r_c, g_c, b_c = webcolors.name_to_rgb(name)
+                distance = ((r_c - requested_rgb[0]) ** 2 +
+                            (g_c - requested_rgb[1]) ** 2 +
+                            (b_c - requested_rgb[2]) ** 2)
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_name = name
+            except:
+                continue
+        return closest_name
 
     try:
-        name = webcolors.hex_to_name(hex_color)
+        return webcolors.hex_to_name(hex_color)
     except ValueError:
         r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (1, 3, 5))
-        name = closest_color((r, g, b))
+        return closest_color((r, g, b))
 
-    return name
 
 # AI suggestion function
 def get_suggestions(hex_color, color_name, description, occasion):
