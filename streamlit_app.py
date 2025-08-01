@@ -3,7 +3,6 @@ from PIL import Image
 import requests
 import os
 from colorthief import ColorThief
-import webcolors
 from datetime import datetime
 
 # -------------------- Session State --------------------
@@ -18,7 +17,6 @@ if "style_tone" not in st.session_state:
 st.set_page_config(page_title="AI Outfit Matcher", page_icon="💅", layout="centered")
 st.title("💕 AI Outfit Matcher")
 st.caption("Your modest styling assistant. Upload a dress photo to get color-matched outfit suggestions!")
-
 st.markdown("---")
 
 # -------------------- Upload Stage --------------------
@@ -33,31 +31,44 @@ def get_main_color(image_file):
     os.remove("temp.jpg")
     return ct.get_color(quality=1)
 
-# -------------------- Color Naming --------------------
+# -------------------- Custom Color Naming --------------------
 def get_closest_color_name(hex_color):
-    css3_color_names = webcolors.CSS3_NAMES_TO_HEX.keys()
+    named_colors = {
+        "black": (0, 0, 0),
+        "white": (255, 255, 255),
+        "red": (255, 0, 0),
+        "green": (0, 128, 0),
+        "blue": (0, 0, 255),
+        "navy": (0, 0, 128),
+        "maroon": (128, 0, 0),
+        "olive": (128, 128, 0),
+        "gray": (128, 128, 128),
+        "silver": (192, 192, 192),
+        "purple": (128, 0, 128),
+        "teal": (0, 128, 128),
+        "aqua": (0, 255, 255),
+        "fuchsia": (255, 0, 255),
+        "yellow": (255, 255, 0),
+        "orange": (255, 165, 0),
+        "pink": (255, 192, 203),
+        "brown": (165, 42, 42),
+        "midnightblue": (25, 25, 112),
+        "indigo": (75, 0, 130),
+        "skyblue": (135, 206, 235),
+        "lightgray": (211, 211, 211),
+    }
 
-    def closest_color(requested_rgb):
-        min_distance = float("inf")
-        closest_name = None
-        for name in css3_color_names:
-            try:
-                r_c, g_c, b_c = webcolors.name_to_rgb(name)
-                distance = ((r_c - requested_rgb[0]) ** 2 +
-                            (g_c - requested_rgb[1]) ** 2 +
-                            (b_c - requested_rgb[2]) ** 2)
-                if distance < min_distance:
-                    min_distance = distance
-                    closest_name = name
-            except:
-                continue
-        return closest_name
+    r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (1, 3, 5))
 
-    try:
-        return webcolors.hex_to_name(hex_color)
-    except ValueError:
-        r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (1, 3, 5))
-        return closest_color((r, g, b))
+    min_distance = float("inf")
+    closest_color = None
+    for name, (r_c, g_c, b_c) in named_colors.items():
+        distance = ((r - r_c) ** 2 + (g - g_c) ** 2 + (b - b_c) ** 2) ** 0.5
+        if distance < min_distance:
+            min_distance = distance
+            closest_color = name
+
+    return closest_color or "Unknown"
 
 # -------------------- AI Prompt --------------------
 def get_suggestions(hex_color, color_name, description, occasion, tone):
@@ -102,6 +113,7 @@ if uploaded_file:
     st.markdown("---")
     st.header("🎨 2. Review Detected Color")
     st.image(uploaded_file, caption="Your Dress", use_container_width=True)
+
     color = get_main_color(uploaded_file)
     hex_color = '#%02x%02x%02x' % color
     color_name = get_closest_color_name(hex_color)
